@@ -7,11 +7,15 @@ from pathlib import Path
 from junctions import create_branch, inspect_destination, source_path
 
 
+SOURCE_GROUPS = ("Scripts", "Maps", "Props", "Other")
+
+
 class BranchStore:
     def __init__(self, settings_file):
         self.settings_file = Path(settings_file)
         self.profiles = {}
         self.history = []
+        self.source_options = {}
         self.current_source = ""
         self.load()
         discovered = False
@@ -47,11 +51,16 @@ class BranchStore:
         selected = data.get("last_source", "")
         if isinstance(selected, str) and selected in self.profiles:
             self.current_source = selected
+        options = data.get("source_options", {})
+        if isinstance(options, dict):
+            self.source_options = {source: {"favourite": option.get("favourite") is True,
+                                           "group": option.get("group") if option.get("group") in SOURCE_GROUPS else self.default_group(source)}
+                                   for source, option in options.items() if source in self.profiles and isinstance(option, dict)}
 
     def save(self):
         temporary = self.settings_file.with_suffix(".tmp")
         temporary.write_text(json.dumps({"last_source": self.current_source, "profiles": self.profiles,
-                                         "history": self.history}, indent=2), encoding="utf-8")
+                                         "history": self.history, "source_options": self.source_options}, indent=2), encoding="utf-8")
         temporary.replace(self.settings_file)
 
     def select_source(self, source):
@@ -68,9 +77,35 @@ class BranchStore:
         if source not in self.profiles:
             raise ValueError("That source is not in your saved folders.")
         del self.profiles[source]
+        self.source_options.pop(source, None)
         self.history = [entry for entry in self.history if Path(entry["source"]) != Path(source)]
         if self.current_source == source:
             self.current_source = next(iter(self.profiles), "")
+        self.save()
+
+    @staticmethod
+    def default_group(source):
+        folder = Path(source)
+        parts = {part.lower() for part in folder.parts}
+        if "tss_maps" in parts or folder.name.lower().startswith("tss-mlo"):
+            return "Maps"
+        if "tss_props" in parts or folder.name.lower().startswith("tss-props"):
+            return "Props"
+        if "tss_scripts" in parts:
+            return "Scripts"
+        return "Other"
+
+    def update_source_option(self, source, field, value):
+        if source not in self.profiles:
+            raise ValueError("That source is not in your saved folders.")
+        if field == "group" and value not in SOURCE_GROUPS:
+            raise ValueError("Choose a valid group.")
+        if field == "favourite" and not isinstance(value, bool):
+            raise ValueError("Favourite must be on or off.")
+        if field not in ("group", "favourite"):
+            raise ValueError("That setting is not available.")
+        options = self.source_options.setdefault(source, {"favourite": False, "group": self.default_group(source)})
+        options[field] = value
         self.save()
 
     def add_destination(self, destination, previous=None):
@@ -138,7 +173,9 @@ class BranchStore:
             history.append({**entry, "id": index, "source_name": Path(entry["source"]).name,
                             "link": self.link_data(entry["source"], entry["destination"])})
         return {"source": self.current_source, "source_name": Path(self.current_source).name if self.current_source else "",
-                "profiles": [{"path": source, "name": Path(source).name, "count": len(destinations)}
+                "groups": list(SOURCE_GROUPS),
+                "profiles": [{"path": source, "name": Path(source).name, "count": len(destinations),
+                              **self.source_options.get(source, {"favourite": False, "group": self.default_group(source)})}
                              for source, destinations in self.profiles.items()],
                 "destinations": [self.link_data(self.current_source, destination) for destination in self.destinations],
                 "history": history}

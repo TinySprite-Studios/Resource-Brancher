@@ -12,6 +12,11 @@ const icons = {
 let applicationState = { profiles: [], destinations: [], history: [] };
 let busy = false;
 let toastTimeout;
+let applicationReady = false;
+let loadingTimeout;
+let readinessTimer;
+let refreshPending = false;
+let refreshTimer;
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -39,19 +44,78 @@ async function request(action, value = null, previous = null) {
   busy = true;
   document.querySelector("#create").disabled = true;
   try {
-    const result = await window.pywebview.api.request(action, value, previous);
+    if (typeof window.pywebview?.api?.request !== "function")
+      throw new Error("Desktop connection unavailable");
+    const operation = window.pywebview.api.request(action, value, previous);
+    const result =
+      !applicationReady && action === "state"
+        ? await startupRequest(operation)
+        : await operation;
     if (result.state) applicationState = result.state;
     render();
     if (!result.ok) showToast(result.error);
     else if (result.message) showToast(result.message);
+    if (!applicationReady) {
+      if (result.ok) {
+        applicationReady = true;
+        clearTimeout(loadingTimeout);
+        document.querySelector("#loading-screen").hidden = true;
+      } else {
+        showLoadingError();
+      }
+    }
     return result.ok;
   } catch (error) {
     showToast("Could not complete that action. Please try again.");
+    if (!applicationReady) showLoadingError();
   } finally {
     busy = false;
     document.querySelector("#create").disabled =
       !applicationState.destinations.length;
+    if (refreshPending && applicationReady) {
+      refreshPending = false;
+      scheduleStatusRefresh();
+    }
   }
+}
+
+function showLoadingError() {
+  document.querySelector("#loading-message").textContent =
+    "Could not load your folders.";
+  document.querySelector(".loading-spinner").hidden = true;
+  document.querySelector("#retry-loading").hidden = false;
+}
+
+function startupRequest(operation) {
+  let timeout;
+  const deadline = new Promise((resolve, reject) => {
+    timeout = setTimeout(() => reject(new Error("Loading timed out")), 15000);
+  });
+  return Promise.race([operation, deadline]).finally(() =>
+    clearTimeout(timeout),
+  );
+}
+
+function loadApplication() {
+  if (applicationReady || busy) return;
+  clearTimeout(loadingTimeout);
+  clearTimeout(readinessTimer);
+  document.querySelector("#loading-message").textContent = "Loading…";
+  document.querySelector(".loading-spinner").hidden = false;
+  document.querySelector("#retry-loading").hidden = true;
+  loadingTimeout = setTimeout(() => {
+    clearTimeout(readinessTimer);
+    if (!applicationReady && !busy) showLoadingError();
+  }, 15000);
+  function connectWhenReady() {
+    if (typeof window.pywebview?.api?.request === "function") {
+      clearTimeout(loadingTimeout);
+      request("state");
+    } else {
+      readinessTimer = setTimeout(connectWhenReady, 250);
+    }
+  }
+  connectWhenReady();
 }
 
 function switchTab(name) {
@@ -70,6 +134,16 @@ function render() {
     state.destinations.length;
   document.querySelector("#history-count").textContent = state.history.length;
   renderSources();
+  const selectedSource = state.profiles.find(
+    (source) => source.path === state.source,
+  );
+  const groupPicker = document.querySelector("#source-group");
+  groupPicker.replaceChildren();
+  for (const group of state.groups || ["Scripts", "Maps", "Props", "Other"]) {
+    groupPicker.append(element("option", "", group));
+  }
+  groupPicker.value = selectedSource?.group || "Other";
+  groupPicker.disabled = !selectedSource;
   document.querySelector("#source-name").textContent =
     state.source_name || "Choose a source folder";
   document.querySelector("#source-path").textContent = state.source || "";
@@ -79,6 +153,7 @@ function render() {
     : "Choose folder";
   document.querySelector("#source-path").title = state.source || "";
   document.querySelector("#open-source").disabled = !state.source;
+  document.querySelector("#source-open-with").disabled = !state.source;
   const destinations = document.querySelector("#destination-cards");
   destinations.replaceChildren();
   for (const destination of state.destinations) {
@@ -103,7 +178,10 @@ function render() {
     edit.onclick = () => request("edit_destination", destination.path);
     const remove = element("button", "remove", "Remove from setup");
     remove.onclick = () => request("remove_destination", destination.path);
-    actions.append(open, edit, remove);
+    const openWith = element("button", "", "Open with");
+    openWith.onclick = (event) =>
+      showEditorMenu(event.currentTarget, destination.path);
+    actions.append(open, openWith, edit, remove);
     card.append(actions);
     destinations.append(card);
   }
@@ -128,6 +206,7 @@ function render() {
 
 function renderSources() {
   const library = document.querySelector("#sources");
+  const scrollPosition = library.scrollTop;
   const query = document
     .querySelector("#source-search")
     .value.trim()
@@ -136,30 +215,75 @@ function renderSources() {
     `${source.name} ${source.path}`.toLowerCase().includes(query),
   );
   library.replaceChildren();
-  for (const source of sources) {
-    const row = element(
-      "div",
-      `source-entry${source.path === applicationState.source ? " selected" : ""}`,
+  const groups = [
+    "Favourites",
+    ...(applicationState.groups || ["Scripts", "Maps", "Props", "Other"]),
+  ];
+  for (const group of groups) {
+    const members = sources.filter((source) =>
+      group === "Favourites"
+        ? source.favourite
+        : !source.favourite && (source.group || "Other") === group,
     );
-    const select = element("button", "source-select");
-    select.title = source.path;
-    select.append(icon("folder"));
-    const description = element("span", "source-entry-text");
-    description.append(element("strong", "", source.name));
-    select.append(description);
-    select.onclick = async () => {
-      if (await request("select_source", source.path)) switchTab("workspace");
-    };
-    const remove = element("button", "remove-source", "×");
-    remove.title = "Remove from app";
-    remove.setAttribute("aria-label", `Remove ${source.name} from app`);
-    remove.onclick = () => request("remove_source", source.path);
-    row.append(select, remove);
-    library.append(row);
+    if (!members.length) continue;
+    library.append(element("h3", "source-section-title", group));
+    for (const source of members) {
+      const row = element(
+        "div",
+        `source-entry${source.path === applicationState.source ? " selected" : ""}`,
+      );
+      const select = element("button", "source-select");
+      select.title = source.path;
+      select.append(icon("folder"));
+      const description = element("span", "source-entry-text");
+      description.append(element("strong", "", source.name));
+      select.append(description);
+      select.onclick = async () => {
+        if (await request("select_source", source.path)) switchTab("workspace");
+      };
+      const favourite = element(
+        "button",
+        `favourite-source${source.favourite ? " pinned" : ""}`,
+        source.favourite ? "★" : "☆",
+      );
+      favourite.title = source.favourite ? "Unpin favourite" : "Pin favourite";
+      favourite.setAttribute(
+        "aria-label",
+        `${favourite.title}: ${source.name}`,
+      );
+      favourite.setAttribute("aria-pressed", String(Boolean(source.favourite)));
+      favourite.onclick = () => request("toggle_favourite", source.path);
+      const remove = element("button", "remove-source", "×");
+      remove.title = "Remove from app";
+      remove.setAttribute("aria-label", `Remove ${source.name} from app`);
+      remove.onclick = () => request("remove_source", source.path);
+      row.append(select, favourite, remove);
+      library.append(row);
+    }
   }
   if (query && !sources.length)
     library.append(element("p", "source-search-empty", "No matches"));
+  library.scrollTop = scrollPosition;
 }
+
+function scheduleStatusRefresh() {
+  if (!applicationReady || document.hidden) return;
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    if (busy) {
+      refreshPending = true;
+      return;
+    }
+    request("state");
+  }, 250);
+}
+
+window.addEventListener("focus", scheduleStatusRefresh);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) scheduleStatusRefresh();
+});
+document.querySelector("#source-group").onchange = (event) =>
+  request("set_group", applicationState.source, event.target.value);
 
 function renderHistory() {
   const container = document.querySelector("#history-list");
@@ -226,6 +350,51 @@ function renderHistory() {
   }
 }
 
+async function showEditorMenu(anchor, folder) {
+  const menu = document.querySelector("#editor-menu");
+  menu.hidden = true;
+  menu.replaceChildren();
+  try {
+    const result = await window.pywebview.api.request("editors");
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    for (const editor of result.editors) {
+      const button = element("button", "", editor.name);
+      button.setAttribute("role", "menuitem");
+      button.onclick = () => {
+        menu.hidden = true;
+        request("open_with", folder, editor.id);
+      };
+      menu.append(button);
+    }
+    if (!result.editors.length)
+      menu.append(element("p", "", "No supported editors found"));
+    menu.hidden = false;
+    const bounds = anchor.getBoundingClientRect();
+    menu.style.left = `${Math.max(8, Math.min(bounds.left, window.innerWidth - menu.offsetWidth - 8))}px`;
+    menu.style.top = `${bounds.bottom + menu.offsetHeight + 8 > window.innerHeight ? Math.max(8, bounds.top - menu.offsetHeight - 6) : bounds.bottom + 6}px`;
+    menu.querySelector("button")?.focus();
+  } catch (error) {
+    showToast("Could not detect installed editors.");
+  }
+}
+
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest("#editor-menu"))
+    document.querySelector("#editor-menu").hidden = true;
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape")
+    document.querySelector("#editor-menu").hidden = true;
+});
+document.querySelector(".canvas-scroll").addEventListener("scroll", () => {
+  document.querySelector("#editor-menu").hidden = true;
+});
+document.querySelector("#source-open-with").onclick = (event) =>
+  showEditorMenu(event.currentTarget, applicationState.source);
+
 document.querySelector("#source-icon").append(icon("folder"));
 document.querySelector("#open-source").append(icon("folder"));
 document.querySelector("#open-source").onclick = () =>
@@ -248,5 +417,7 @@ document
 document.querySelector("#history-search").oninput = renderHistory;
 document.querySelector("#source-search").oninput = renderSources;
 document.querySelector("#create").onclick = () => request("create");
-window.addEventListener("pywebviewready", () => request("state"));
+document.querySelector("#retry-loading").onclick = loadApplication;
+window.addEventListener("pywebviewready", loadApplication);
+loadApplication();
 render();

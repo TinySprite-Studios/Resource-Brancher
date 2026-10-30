@@ -4,13 +4,32 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Resource Brancher</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="assets/resource-brancher-logo.png"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <div
+      id="loading-screen"
+      class="loading-screen"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span id="loading-message">Loading…</span>
+      <button id="retry-loading" class="button subtle" hidden>Retry</button>
+    </div>
     <header class="titlebar">
       <div class="appmark pywebview-drag-region">
-        <span class="mark">T</span><strong>TINYSPRITE</strong
-        ><span class="title-divider"></span><span>Resource Brancher</span>
+        <img
+          class="brand-logo"
+          src="assets/resource-brancher-logo.png"
+          alt=""
+        /><strong>TINYSPRITE</strong><span class="title-divider"></span
+        ><span>Resource Brancher</span>
       </div>
       <div class="window-actions">
         <button data-window="minimize" aria-label="Minimize">−</button
@@ -58,12 +77,22 @@
                   <h2 id="source-name">Choose a source folder</h2>
                   <p id="source-path" hidden></p>
                 </div>
+                <select
+                  id="source-group"
+                  class="source-group"
+                  aria-label="Resource group"
+                  title="Resource group"
+                  disabled
+                ></select>
                 <button
                   id="open-source"
                   class="icon-button"
                   title="Open source in File Explorer"
                   aria-label="Open source in File Explorer"
                 ></button>
+                <button id="source-open-with" class="button subtle" disabled>
+                  Open with
+                </button>
                 <button
                   class="button subtle"
                   data-action="choose_source"
@@ -97,6 +126,7 @@
       </main>
     </div>
     <div id="toast" role="status"></div>
+    <div id="editor-menu" class="editor-menu" role="menu" hidden></div>
     <script src="app.js"></script>
   </body>
 </html>

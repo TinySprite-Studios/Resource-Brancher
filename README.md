@@ -1,5 +1,7 @@
 # Resource Brancher
 
+<img src="ui/assets/resource-brancher-logo.png" width="80" alt="Resource Brancher logo">
+
 A small Windows app for sharing one source folder across multiple locations. Useful for running the same FiveM resources on different development servers.
 
 Resource Brancher creates **directory junctions**. Each destination points to your original folder, so edits made through any location affect the same files. Nothing is copied or synced. These are folder links, not Git branches.
@@ -26,8 +28,12 @@ No UI build step is needed.
 For example, selecting `C:\Resources\my-resource` as the source and `C:\Servers\Test\resources` as the destination parent creates a link at `C:\Servers\Test\resources\my-resource`.
 
 - Select a source in the sidebar to return to its saved setup. Use the search box to filter by name or path.
+- Click the star beside a source to pin it under **Favourites**.
+- Use the group selector on the source card to organise resources into **Scripts**, **Maps**, **Props** or **Other**. Favourites and groups are saved locally.
+- Link status refreshes automatically when you return to the app.
 - Click **×** beside a source to remove its setup and history from the app. Its source folder and existing links stay in place.
 - Click a folder icon to open that location in File Explorer.
+- **Open with** lists supported editors found on your computer: VS Code, VS Code Insiders, Notepad++, Cursor, Windsurf and Sublime Text. Detection checks standard install folders, PATH and registered application paths. Portable editors outside these locations may not appear.
 - **Edit path** chooses a new parent folder while keeping the resource folder name. It updates the setup; it does not move an existing link.
 - **Remove from setup** only removes the saved destination. It does not delete its link or files.
 
@@ -64,5 +70,5 @@ Before sharing a ZIP, leave out `settings.json`, settings backups, setup reports
 ## Tests
 
 ```console
-python -m unittest -v test_brancher
+python -m unittest -v
 ```

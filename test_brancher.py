@@ -175,6 +175,34 @@ class BrancherTests(unittest.TestCase):
         store.remove_source(str(self.source))
         self.assertEqual(store.current_source, str(other_source))
 
+    def test_favourites_and_groups_persist_without_changing_links(self):
+        settings = self.workspace / "settings.json"
+        store = BranchStore(settings)
+        store.select_source(str(self.source))
+        destination = self.workspace / "Kept branch"
+        self.make_branch(destination)
+        store.add_destination(str(destination))
+        api = DesktopApi(store)
+        self.assertTrue(api.request("toggle_favourite", str(self.source))["ok"])
+        self.assertTrue(api.request("set_group", str(self.source), "Maps")["ok"])
+        restored = BranchStore(settings)
+        profile = restored.snapshot()["profiles"][0]
+        self.assertTrue(profile["favourite"])
+        self.assertEqual(profile["group"], "Maps")
+        self.assertEqual(restored.destinations, [str(destination)])
+        self.assertTrue(is_junction(destination))
+        self.assertFalse(api.request("set_group", str(self.source), "Invalid")["ok"])
+        self.assertTrue(api.request("toggle_favourite", str(self.source))["ok"])
+        self.assertFalse(store.snapshot()["profiles"][0]["favourite"])
+        store.remove_source(str(self.source))
+        self.assertNotIn(str(self.source), store.source_options)
+
+    def test_default_groups_use_existing_source_layout(self):
+        self.assertEqual(BranchStore.default_group(r"C:\TSS_Source\TSS_Scripts\example"), "Scripts")
+        self.assertEqual(BranchStore.default_group(r"C:\TSS_Source\TSS_Maps\example"), "Maps")
+        self.assertEqual(BranchStore.default_group(r"C:\TSS_Source\TSS_Props\example"), "Props")
+        self.assertEqual(BranchStore.default_group(r"C:\Other\example"), "Other")
+
     def test_folder_picker_edits_setup_without_moving_existing_link(self):
         store = BranchStore(self.workspace / "settings.json")
         store.select_source(str(self.source))
@@ -184,14 +212,14 @@ class BrancherTests(unittest.TestCase):
         new_parent = self.workspace / "New location"
         new_parent.mkdir()
         api = DesktopApi(store)
-        api.window = Mock()
-        api.window.create_file_dialog.return_value = (str(new_parent),)
+        api._window = Mock()
+        api._window.create_file_dialog.return_value = (str(new_parent),)
         result = api.request("edit_destination", str(destination))
         self.assertTrue(result["ok"])
         self.assertEqual(store.destinations, [str(new_parent / destination.name)])
         self.assertTrue(is_junction(destination))
         self.assertFalse((new_parent / destination.name).exists())
-        api.window.create_file_dialog.return_value = None
+        api._window.create_file_dialog.return_value = None
         self.assertTrue(api.request("edit_destination", store.destinations[0])["ok"])
         self.assertEqual(store.destinations, [str(new_parent / destination.name)])
 
