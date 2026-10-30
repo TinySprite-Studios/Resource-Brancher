@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Resource Brancher</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="titlebar">
+      <div class="appmark pywebview-drag-region">
+        <span class="mark">T</span><strong>TINYSPRITE</strong
+        ><span class="title-divider"></span><span>Resource Brancher</span>
+      </div>
+      <div class="window-actions">
+        <button data-window="minimize" aria-label="Minimize">−</button
+        ><button data-window="maximize" aria-label="Maximize">□</button
+        ><button data-window="close" aria-label="Close">×</button>
+      </div>
+    </header>
+    <div class="shell">
+      <aside>
+        <div class="sidebar-heading">
+          <span>Sources</span><span id="library-count" class="count">0</span>
+        </div>
+        <button class="new-source" data-action="choose_source">
+          <span>＋</span> Add source folder
+        </button>
+        <div id="sources" class="source-list"></div>
+      </aside>
+      <main>
+        <nav>
+          <button class="tab active" data-tab="workspace">
+            Workspace<span id="destination-count" class="count">0</span></button
+          ><button class="tab" data-tab="history">
+            History<span id="history-count" class="count">0</span>
+          </button>
+          <button
+            class="icon-button"
+            id="refresh"
+            title="Refresh link status"
+            aria-label="Refresh link status"
+          ></button>
+        </nav>
+        <section id="workspace" class="page active">
+          <div class="canvas-scroll">
+            <div id="branch-map" class="branch-map">
+              <div class="source-card">
+                <div class="source-icon" id="source-icon"></div>
+                <div class="source-description">
+                  <h2 id="source-name">Choose a source folder</h2>
+                  <p id="source-path" hidden></p>
+                </div>
+                <button
+                  id="open-source"
+                  class="icon-button"
+                  title="Open source in File Explorer"
+                  aria-label="Open source in File Explorer"
+                ></button>
+                <button
+                  class="button subtle"
+                  data-action="choose_source"
+                  id="source-choose"
+                >
+                  Choose folder</button
+                ><span class="node-port"></span>
+              </div>
+              <div class="connection" aria-hidden="true"></div>
+              <div id="destination-cards" class="destinations"></div>
+            </div>
+          </div>
+          <div class="workspace-footer">
+            <strong id="setup-summary"></strong>
+            <button id="create" class="button primary">
+              Create branches <span>↗</span>
+            </button>
+          </div>
+        </section>
+        <section id="history" class="page">
+          <div class="history-toolbar">
+            <input
+              id="history-search"
+              type="search"
+              placeholder="Search folders or paths…"
+              aria-label="Search history"
+            />
+          </div>
+          <div id="history-list" class="history-list"></div>
+        </section>
+      </main>
+    </div>
+    <div id="toast" role="status"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
