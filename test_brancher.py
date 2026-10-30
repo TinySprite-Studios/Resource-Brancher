@@ -137,6 +137,44 @@ class BrancherTests(unittest.TestCase):
         self.assertFalse(api.request("unknown")["ok"])
         self.assertFalse((self.workspace / "Second branch").exists())
 
+    def test_remove_source_only_forgets_its_setup_and_history(self):
+        settings = self.workspace / "settings.json"
+        store = BranchStore(settings)
+        store.select_source(str(self.source))
+        destination = self.workspace / "Kept branch"
+        self.make_branch(destination)
+        store.add_destination(str(destination))
+        store.record(str(self.source), str(destination), "created")
+        sentinel = self.source / "keep.txt"
+        sentinel.write_text("keep", encoding="utf-8")
+        other_source = self.workspace / "Other source"
+        other_source.mkdir()
+        store.select_source(str(other_source))
+        store.record(str(other_source), str(self.workspace / "Other branch"), "created")
+        api = DesktopApi(store)
+        self.assertTrue(api.request("remove_source", str(self.source))["ok"])
+        self.assertEqual(store.current_source, str(other_source))
+        self.assertTrue(is_junction(destination))
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
+        restored = BranchStore(settings)
+        self.assertNotIn(str(self.source), restored.profiles)
+        self.assertEqual(len(restored.history), 1)
+        self.assertEqual(restored.history[0]["source"], str(other_source))
+        self.assertTrue(api.request("remove_source", str(other_source))["ok"])
+        self.assertEqual(store.current_source, "")
+        self.assertEqual(store.snapshot()["destinations"], [])
+        self.assertFalse(api.request("remove_source", str(other_source))["ok"])
+        self.assertTrue(other_source.is_dir())
+
+    def test_remove_selected_source_selects_another_saved_source(self):
+        store = BranchStore(self.workspace / "settings.json")
+        other_source = self.workspace / "Other source"
+        other_source.mkdir()
+        store.select_source(str(other_source))
+        store.select_source(str(self.source))
+        store.remove_source(str(self.source))
+        self.assertEqual(store.current_source, str(other_source))
+
     def test_folder_picker_edits_setup_without_moving_existing_link(self):
         store = BranchStore(self.workspace / "settings.json")
         store.select_source(str(self.source))

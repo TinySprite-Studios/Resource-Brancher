@@ -69,23 +69,7 @@ function render() {
   document.querySelector("#destination-count").textContent =
     state.destinations.length;
   document.querySelector("#history-count").textContent = state.history.length;
-  const library = document.querySelector("#sources");
-  library.replaceChildren();
-  for (const source of state.profiles) {
-    const button = element(
-      "button",
-      `source-entry${source.path === state.source ? " selected" : ""}`,
-    );
-    button.title = source.path;
-    button.append(icon("folder"));
-    const description = element("span", "source-entry-text");
-    description.append(element("strong", "", source.name));
-    button.append(description);
-    button.onclick = async () => {
-      if (await request("select_source", source.path)) switchTab("workspace");
-    };
-    library.append(button);
-  }
+  renderSources();
   document.querySelector("#source-name").textContent =
     state.source_name || "Choose a source folder";
   document.querySelector("#source-path").textContent = state.source || "";
@@ -140,6 +124,41 @@ function render() {
     : "";
   document.querySelector("#create").disabled = !state.destinations.length;
   renderHistory();
+}
+
+function renderSources() {
+  const library = document.querySelector("#sources");
+  const query = document
+    .querySelector("#source-search")
+    .value.trim()
+    .toLowerCase();
+  const sources = applicationState.profiles.filter((source) =>
+    `${source.name} ${source.path}`.toLowerCase().includes(query),
+  );
+  library.replaceChildren();
+  for (const source of sources) {
+    const row = element(
+      "div",
+      `source-entry${source.path === applicationState.source ? " selected" : ""}`,
+    );
+    const select = element("button", "source-select");
+    select.title = source.path;
+    select.append(icon("folder"));
+    const description = element("span", "source-entry-text");
+    description.append(element("strong", "", source.name));
+    select.append(description);
+    select.onclick = async () => {
+      if (await request("select_source", source.path)) switchTab("workspace");
+    };
+    const remove = element("button", "remove-source", "×");
+    remove.title = "Remove from app";
+    remove.setAttribute("aria-label", `Remove ${source.name} from app`);
+    remove.onclick = () => request("remove_source", source.path);
+    row.append(select, remove);
+    library.append(row);
+  }
+  if (query && !sources.length)
+    library.append(element("p", "source-search-empty", "No matches"));
 }
 
 function renderHistory() {
@@ -227,6 +246,7 @@ document
   .querySelectorAll("[data-tab]")
   .forEach((button) => (button.onclick = () => switchTab(button.dataset.tab)));
 document.querySelector("#history-search").oninput = renderHistory;
+document.querySelector("#source-search").oninput = renderSources;
 document.querySelector("#create").onclick = () => request("create");
 window.addEventListener("pywebviewready", () => request("state"));
 render();

@@ -837,3 +837,42 @@ nav #refresh {
   width: 14px;
   height: 14px;
 }
+
+.source-search {
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 11px;
+}
+.source-entry {
+  padding: 0;
+  gap: 0;
+}
+.source-select {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  padding: 12px 10px;
+  color: inherit;
+}
+.remove-source {
+  flex-shrink: 0;
+  width: 27px;
+  height: 28px;
+  margin-right: 4px;
+  color: #777d85;
+  font-size: 18px;
+  border-radius: 4px;
+}
+.remove-source:hover,
+.remove-source:focus-visible {
+  color: var(--red-bright);
+  background: #d94a5014;
+}
+.source-search-empty {
+  padding: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}

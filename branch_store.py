@@ -64,6 +64,15 @@ class BranchStore:
         self.current_source = source
         self.save()
 
+    def remove_source(self, source):
+        if source not in self.profiles:
+            raise ValueError("That source is not in your saved folders.")
+        del self.profiles[source]
+        self.history = [entry for entry in self.history if Path(entry["source"]) != Path(source)]
+        if self.current_source == source:
+            self.current_source = next(iter(self.profiles), "")
+        self.save()
+
     def add_destination(self, destination, previous=None):
         if not self.current_source:
             raise ValueError("Choose a source folder first.")

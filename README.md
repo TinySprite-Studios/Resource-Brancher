@@ -25,7 +25,8 @@ No UI build step is needed.
 
 For example, selecting `C:\Resources\my-resource` as the source and `C:\Servers\Test\resources` as the destination parent creates a link at `C:\Servers\Test\resources\my-resource`.
 
-- Select a source in the sidebar to return to its saved setup.
+- Select a source in the sidebar to return to its saved setup. Use the search box to filter by name or path.
+- Click **×** beside a source to remove its setup and history from the app. Its source folder and existing links stay in place.
 - Click a folder icon to open that location in File Explorer.
 - **Edit path** chooses a new parent folder while keeping the resource folder name. It updates the setup; it does not move an existing link.
 - **Remove from setup** only removes the saved destination. It does not delete its link or files.

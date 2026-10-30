@@ -33,6 +33,8 @@ class DesktopApi:
                         self.store.select_source(selected[0])
                 elif action == "select_source":
                     self.store.select_source(value)
+                elif action == "remove_source":
+                    self.store.remove_source(value)
                 elif action == "choose_destination":
                     import webview
                     if not self.store.current_source:
