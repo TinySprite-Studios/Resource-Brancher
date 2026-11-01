@@ -1,0 +1,17 @@
+__pycache__/
+settings.json
+settings.tmp
+brancher-error.log
+
+settings-before-*.json
+
+category-*.json
+
+category-*.log
+
+build/
+dist/
+*.spec
+.venv/
+setup-report.json
+ResourceBrancher Clean/

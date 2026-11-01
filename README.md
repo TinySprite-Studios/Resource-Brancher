@@ -63,7 +63,7 @@ If you delete a link manually, it returns to **Ready** after refreshing. Links d
 
 ## Saved data
 
-Sources, destinations and history are stored in `settings.json` beside the app. It is created when you save a setup and is excluded by `.gitignore`.
+Sources, destinations and history are stored in `%LOCALAPPDATA%\Resource Brancher\settings.json` for both source and executable launches. Your personal setup stays outside the repository and builds.
 
 Before sharing a ZIP, leave out `settings.json`, settings backups, setup reports and error logs. `.gitignore` only affects Git uploads.
 
@@ -72,3 +72,21 @@ Before sharing a ZIP, leave out `settings.json`, settings backups, setup reports
 ```console
 python -m unittest -v
 ```
+
+## FiveM category startup
+
+If you use commands such as `ensure [tss_paid]`, keep the same bracketed category name in your real source path:
+
+```text
+Sources/
+  [tss_paid]/my-resource/
+  [mlo]/my-map/
+  [prop]/my-props/
+```
+
+FiveM resolves junctions when assigning categories. A source path without the bracketed category can make category startup miss the resource, even though starting it by name works.
+
+
+## Build and release
+
+This folder is the single working checkout. Run `scripts/build.ps1` to build. See BUILDING.md for release instructions. Builds bundle only application assets, never saved settings. Your installed build and source launch share your personal Windows settings.

@@ -87,11 +87,11 @@ class BranchStore:
     def default_group(source):
         folder = Path(source)
         parts = {part.lower() for part in folder.parts}
-        if "tss_maps" in parts or folder.name.lower().startswith("tss-mlo"):
+        if parts.intersection(("tss_maps", "[mlo]")) or folder.name.lower().startswith("tss-mlo"):
             return "Maps"
-        if "tss_props" in parts or folder.name.lower().startswith("tss-props"):
+        if parts.intersection(("tss_props", "[prop]")) or folder.name.lower().startswith("tss-props"):
             return "Props"
-        if "tss_scripts" in parts:
+        if parts.intersection(("tss_scripts", "[tss_paid]")):
             return "Scripts"
         return "Other"
 

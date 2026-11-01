@@ -202,6 +202,9 @@ class BrancherTests(unittest.TestCase):
         self.assertEqual(BranchStore.default_group(r"C:\TSS_Source\TSS_Maps\example"), "Maps")
         self.assertEqual(BranchStore.default_group(r"C:\TSS_Source\TSS_Props\example"), "Props")
         self.assertEqual(BranchStore.default_group(r"C:\Other\example"), "Other")
+        self.assertEqual(BranchStore.default_group(r"G:\TSS_Source\[tss_paid]\example"), "Scripts")
+        self.assertEqual(BranchStore.default_group(r"G:\TSS_Source\[mlo]\example"), "Maps")
+        self.assertEqual(BranchStore.default_group(r"G:\TSS_Source\[prop]\example"), "Props")
 
     def test_folder_picker_edits_setup_without_moving_existing_link(self):
         store = BranchStore(self.workspace / "settings.json")

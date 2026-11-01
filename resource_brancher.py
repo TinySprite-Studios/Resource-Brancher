@@ -4,12 +4,14 @@ import logging
 import os
 from pathlib import Path
 import threading
+import sys
 
 from branch_store import BranchStore
 from editors import detect_editors, open_in_editor
 
 
 APP_DIRECTORY = Path(__file__).resolve().parent
+DATA_DIRECTORY = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Resource Brancher"
 DEFAULT_SOURCE_DIRECTORY = Path.home()
 
 
@@ -101,22 +103,24 @@ class DesktopApi:
 def main():
     import webview
 
-    store = BranchStore(APP_DIRECTORY / "settings.json")
+    DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    store = BranchStore(DATA_DIRECTORY / "settings.json")
     api = DesktopApi(store)
     api._window = webview.create_window(
         "Resource Brancher", (APP_DIRECTORY / "ui" / "index.html").as_uri(),
         js_api=api, width=1250, height=820, min_size=(980, 680),
         frameless=True, easy_drag=False, shadow=True, background_color="#0f1113",
     )
-    webview.start(gui="edgechromium", private_mode=True)
+    webview.start(gui="edgechromium", private_mode=True, icon=str(APP_DIRECTORY / "resource-brancher.ico") if getattr(sys, "frozen", False) else None)
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception:
-        logging.basicConfig(filename=APP_DIRECTORY / "brancher-error.log", encoding="utf-8", level=logging.ERROR)
+        DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
+        logging.basicConfig(filename=DATA_DIRECTORY / "brancher-error.log", encoding="utf-8", level=logging.ERROR)
         logging.exception("Resource Brancher could not start")
         import ctypes
-        ctypes.windll.user32.MessageBoxW(None, "Could not open Resource Brancher. See brancher-error.log in the program folder.",
+        ctypes.windll.user32.MessageBoxW(None, "Could not open Resource Brancher. See brancher-error.log in your Local AppData Resource Brancher folder.",
                                         "Resource Brancher", 0x10)
