@@ -53,6 +53,12 @@
           aria-label="Search resources"
         />
         <div id="sources" class="source-list"></div>
+        <div class="update-panel">
+          <span id="update-status" role="status">Updates</span>
+          <button id="update-check" class="button subtle">Check for updates</button>
+          <button id="update-download" class="button subtle" hidden>Download update</button>
+          <button id="update-install" class="button primary" hidden>Restart with update</button>
+        </div>
       </aside>
       <main>
         <nav>
@@ -127,6 +133,6 @@
     </div>
     <div id="toast" role="status"></div>
     <div id="editor-menu" class="editor-menu" role="menu" hidden></div>
-    <script src="app.js"></script>
+    <script src="app.js"></script><script src="updates.js"></script>
   </body>
 </html>

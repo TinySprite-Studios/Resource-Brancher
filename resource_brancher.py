@@ -6,6 +6,7 @@ from pathlib import Path
 import threading
 import sys
 
+from updater import Updater
 from branch_store import BranchStore
 from editors import detect_editors, open_in_editor
 
@@ -21,6 +22,7 @@ class DesktopApi:
         self._window = None
         self._lock = threading.RLock()
         self._maximized = False
+        self._updater = Updater(APP_DIRECTORY, DATA_DIRECTORY)
 
     def request(self, action, value=None, previous=None):
         """Expose only the operations needed by the local interface."""
@@ -86,6 +88,13 @@ class DesktopApi:
                 return {"ok": True, "state": self._store.snapshot(), "message": message}
             except (OSError, ValueError) as error:
                 return {"ok": False, "error": str(error), "state": self._store.snapshot()}
+
+    def update_action(self, action):
+        if action == "install":
+            self._updater.install()
+            self._window.destroy()
+            return {"status": "restarting"}
+        return self._updater.action(action)
 
     def window_action(self, action):
         if action == "close":

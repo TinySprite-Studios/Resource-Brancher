@@ -13,6 +13,7 @@ if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
     raise ValueError("Version must have the form 1.0.1")
 assets = root / "build"
 assets.mkdir(exist_ok=True)
+(assets / "VERSION").write_text(version)
 icon = assets / "resource-brancher.ico"
 with Image.open(root / "ui/assets/resource-brancher-logo.png") as image:
     image = image.convert("RGBA")
@@ -22,7 +23,7 @@ with Image.open(root / "ui/assets/resource-brancher-logo.png") as image:
     square.save(icon, sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
 subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean",
     "--windowed", "--onedir", "--name", "Resource Brancher", "--icon", str(icon),
-    "--add-data", "ui;ui", "--add-data", str(icon)+";.",
+    "--add-data", "ui;ui", "--add-data", str(assets / "VERSION")+";.", "--add-data", str(icon)+";.",
     str(root / "resource_brancher.py")], cwd=root, check=True)
 import shutil
 shutil.make_archive(str(root / "dist" / f"Resource-Brancher-{version}-Windows"),

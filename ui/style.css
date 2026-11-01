@@ -976,3 +976,6 @@ nav #refresh {
   height: 30px;
   object-fit: contain;
 }
+
+.update-panel {padding: 16px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #303030; font-size: 12px;}
+.update-panel [hidden] {display:none;}
