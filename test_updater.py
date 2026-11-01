@@ -1,13 +1,15 @@
 import hashlib
 import tempfile
 import unittest
-import zipfile
+import sys
+from unittest.mock import patch
+from updater import Updater
 from pathlib import Path
-from updater import select_release, extract_verified, BASE
+from updater import select_release, verify_download, BASE
 
 class UpdateTests(unittest.TestCase):
     def release(self, tag="v1.0.1"):
-        name=f"Resource-Brancher-{tag[1:]}-Windows.zip"
+        name=f"Resource-Brancher-Setup-{tag[1:]}.exe"
         return {"tag_name":tag,"assets":[{"name":name,"browser_download_url":BASE+tag+"/"+name,"digest":"sha256:"+"a"*64}]}
     def test_versions(self):
         self.assertIsNone(select_release(self.release(), "1.0.1"))
@@ -22,15 +24,29 @@ class UpdateTests(unittest.TestCase):
     def test_missing_checksum(self):
         data=self.release(); data["assets"][0].pop("digest")
         with self.assertRaises(ValueError):select_release(data,"1.0.0")
-    def test_archive(self):
+    def test_download_checksum(self):
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder); archive=root/"update.zip"
-            with zipfile.ZipFile(archive,"w") as z:z.writestr("Resource Brancher.exe",b"example")
-            digest=hashlib.sha256(archive.read_bytes()).hexdigest()
-            extract_verified(archive,root/"valid",digest)
-            self.assertTrue((root/"valid/Resource Brancher.exe").exists())
-            with self.assertRaises(ValueError):extract_verified(archive,root/"bad","0"*64)
-            with zipfile.ZipFile(archive,"w") as z:
-                z.writestr("Resource Brancher.exe",b"example")
-                z.writestr("../escape",b"bad")
-            with self.assertRaises(ValueError):extract_verified(archive,root/"unsafe",hashlib.sha256(archive.read_bytes()).hexdigest())
+            file=Path(folder)/"setup.exe"; file.write_bytes(b"installer")
+            verify_download(file,hashlib.sha256(file.read_bytes()).hexdigest())
+            with self.assertRaises(ValueError):verify_download(file,"0"*64)
+
+    def test_installer_launch_targets_existing_install(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder); (root/"VERSION").write_text("1.0.0")
+            (root/"apply-update.ps1").write_text("# helper")
+            (root/"installed.marker").write_text("installed")
+            (root/"download").mkdir()
+            setup=root/"download/setup.exe"; setup.write_bytes(b"installer")
+            updater=Updater(root,root)
+            updater.stage=setup
+            updater.release={"digest":hashlib.sha256(setup.read_bytes()).hexdigest()}
+            updater.state["status"]="ready"
+            with patch.object(sys,"executable",str(root/"Resource Brancher.exe")), patch("updater.subprocess.Popen") as launch, patch("updater.subprocess.CREATE_NO_WINDOW",0):
+                updater.install()
+                args=launch.call_args.args[0]
+                self.assertEqual(args[args.index("-InstallDirectory")+1], str(root.resolve()))
+                self.assertEqual(args[args.index("-Installer")+1], str(setup))
+    def test_install_requires_download(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder); (root/"VERSION").write_text("1.0.0")
+            with self.assertRaises(ValueError):Updater(root,root).install()

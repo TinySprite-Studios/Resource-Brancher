@@ -8,7 +8,7 @@ import sys
 import tempfile
 import threading
 import urllib.request
-import zipfile
+import os
 from pathlib import Path
 
 REPOSITORY = "TinySprite-Studios/Resource-Brancher"
@@ -21,9 +21,11 @@ def version_tuple(value):
 
 def select_release(data, current):
     tag = data.get("tag_name", "")
+    version_tuple(tag)
+    tag = "v" + tag.removeprefix("v")
     if data.get("draft") or data.get("prerelease") or version_tuple(tag) <= version_tuple(current):
         return None
-    name = f"Resource-Brancher-{tag[1:]}-Windows.zip"
+    name = f"Resource-Brancher-Setup-{tag[1:]}.exe"
     asset = next((a for a in data.get("assets", []) if a.get("name") == name), None)
     if not asset or asset.get("browser_download_url") != BASE + tag + "/" + name:
         raise ValueError("The release has no compatible Windows download yet")
@@ -32,17 +34,13 @@ def select_release(data, current):
         raise ValueError("The release is missing its download checksum")
     return {"version": tag[1:], "url": asset["browser_download_url"], "digest": digest[7:]}
 
-def extract_verified(archive, destination, digest):
-    if hashlib.sha256(archive.read_bytes()).hexdigest().lower() != digest.lower():
+def verify_download(path, digest):
+    checksum = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            checksum.update(chunk)
+    if checksum.hexdigest().lower() != digest.lower():
         raise ValueError("Download checksum did not match. Please try again")
-    with zipfile.ZipFile(archive) as z:
-        for entry in z.infolist():
-            target = (destination / entry.filename).resolve()
-            if not target.is_relative_to(destination.resolve()) or "\\" in entry.filename or ":" in entry.filename:
-                raise ValueError("Invalid update archive")
-        if "Resource Brancher.exe" not in z.namelist():
-            raise ValueError("Update executable is missing")
-        z.extractall(destination)
 
 class Updater:
     def __init__(self, root, data):
@@ -79,13 +77,12 @@ class Updater:
             else:
                 self.data.mkdir(parents=True, exist_ok=True)
                 folder = Path(tempfile.mkdtemp(prefix="update-", dir=self.data))
-                archive = folder / "update.zip"
+                archive = folder / "setup.exe"
                 req = urllib.request.Request(self.release["url"], headers={"User-Agent": "Resource-Brancher"})
                 with urllib.request.urlopen(req, timeout=60) as response, archive.open("wb") as output:
                     shutil.copyfileobj(response, output)
-                stage = folder / "app"
-                extract_verified(archive, stage, self.release["digest"])
-                self.stage = stage
+                verify_download(archive, self.release["digest"])
+                self.stage = archive
                 self.state.update(status="ready")
         except Exception as error:
             self.state.update(status="error", message=str(error))
@@ -95,7 +92,16 @@ class Updater:
     def install(self):
         if self.state["status"] != "ready" or not self.stage:
             raise ValueError("Download an update first")
-        # Launch from a separate, versioned user folder; the running app is never overwritten.
-        executable = self.stage / "Resource Brancher.exe"
-        subprocess.Popen([str(executable)], cwd=self.stage)
+        verify_download(self.stage, self.release["digest"])
+        executable_directory = Path(sys.executable).resolve().parent
+        installed = (executable_directory / "installed.marker").is_file()
+        helper = self.stage.parent / "apply-update.ps1"
+        shutil.copy2(self.root / "apply-update.ps1", helper)
+        command = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                          "-File", str(helper), "-AppProcessId", str(os.getpid()),
+                          "-Installer", str(self.stage),
+                          "-LogFile", str(self.stage.parent / "install.log")]
+        if installed:
+            command.extend(["-InstallDirectory", str(executable_directory)])
+        subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW)
         return True

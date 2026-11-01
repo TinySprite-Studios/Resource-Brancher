@@ -5,7 +5,7 @@ async function updateAction(action = "state") {
   try {
     const state = await window.pywebview.api.update_action(action);
     const busy = ["checking", "downloading", "restarting"].includes(state.status);
-    const messages = {idle: `Version ${state.current}`, checking: "Checking for updates…", downloading: "Downloading update…", available: `Version ${state.version} is available`, current: `Version ${state.current} is up to date`, ready: "Update ready. Restart to use it.", restarting: "Restarting…"};
+    const messages = {idle: `Version ${state.current}`, checking: "Checking for updates…", downloading: "Downloading update…", available: `Version ${state.version} is available`, current: `Version ${state.current} is up to date`, ready: "Update ready. Install and restart to finish.", restarting: "Restarting…"};
     document.querySelector("#update-status").textContent = state.message || messages[state.status] || "Updates";
     document.querySelector("#update-check").disabled = busy || state.status === "disabled";
     document.querySelector("#update-download").hidden = state.status !== "available";

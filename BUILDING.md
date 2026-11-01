@@ -1,29 +1,27 @@
 # Windows builds and releases
 
-Run `powershell -ExecutionPolicy Bypass -File scripts/build.ps1` with Python 3.11 installed.
-The branded executable is in `dist/Resource Brancher/Resource Brancher.exe`.
-Distribute the complete `Resource-Brancher-1.0.0-Windows.zip`; extract before launching.
-Microsoft Edge WebView2 Runtime is required.
-Packaged settings are stored in `%LOCALAPPDATA%/Resource Brancher`, surviving upgrades.
-Source launches and packaged launches use the same personal settings folder. Settings are never bundled.
+Install Python 3.11 and Inno Setup 6. Run `powershell -ExecutionPolicy Bypass -File scripts/build.ps1`.
+The build produces a branded `dist/Resource-Brancher-Setup-VERSION.exe` and a portable ZIP.
+Setup installs per user, creates a Start menu shortcut, offers a desktop shortcut,
+and registers an uninstaller in Windows Settings. Microsoft Edge WebView2 Runtime is required.
 
-Commit and push your changes to the existing GitHub repository, then create and
-push a tag such as `v1.0.1`. The tag supplies the release version automatically.
-GitHub Actions runs tests, builds that tagged commit, and publishes a release titled
-`v1.0.1` with the Windows ZIP attached and generated release notes.
-For example: `git tag v1.0.1` then `git push origin v1.0.1`.
-The workflow must be committed before tagging. Creating a tag only on your computer
-does not trigger GitHub. Manual workflow runs produce a downloadable build artifact.
-Local builds use VERSION; update it when you want the local ZIP version to change.
+## Release
+Commit and push changes, then push a new stable tag such as v1.0.3.
+The tag supplies the version automatically. GitHub Actions tests and builds that commit,
+then publishes the installer and portable ZIP together with generated release notes.
+Local builds use VERSION. Never reuse an existing published tag.
 
-Executables are unsigned; Windows may display a reputation prompt.
+## Updates and personal data
+The app checks the latest public GitHub release at launch and on request.
+Download retrieves the setup EXE and verifies GitHub's SHA-256 digest.
+Install and restart closes the app, waits for it to exit, runs Setup, and reopens
+its installed executable. Installed copies upgrade in their existing folder.
+Portable copies migrate to the normal per-user installation when using this updater.
+Older ZIP-only updater builds need this installer downloaded manually once.
+If installation fails, the helper displays an error and retains the installer and log
+under Local AppData/Resource Brancher/update-* for retry.
 
-## In-app updates
-Built apps check the latest public GitHub release on launch. Users can also check
-manually, download, then choose Restart with update. Downloads require GitHub's
-SHA-256 asset digest. Drafts, prereleases and older versions are ignored.
-Updates run from a versioned folder under Local AppData/Resource Brancher.
-The original portable EXE stays at its previous version; launching it again requires
-checking for updates again. Source copies use Git and cannot install updates.
-Personal settings are shared across versions and never sent to GitHub.
-The first release containing the updater must be downloaded manually.
+Source launches and installed launches share `%LOCALAPPDATA%/Resource Brancher/settings.json`.
+Settings, source/destination paths, history and backups are never copied into the build.
+Setup and the uninstaller leave this settings folder intact. Source copies are updated through Git.
+Executables are unsigned; Windows may show a reputation prompt.

@@ -25,18 +25,22 @@ jobs:
           if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw "Tag must have the form v1.0.1" }
       - run: python -m pip install -r requirements-build.txt
       - run: python -m unittest discover -p "test_*.py"
+      - name: Install installer compiler
+        run: choco install innosetup --no-progress -y
       - run: python scripts/build.py
       - uses: actions/upload-artifact@v4
         with:
           name: Resource-Brancher-Windows
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            dist/*Setup-*.exe
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $assets = @(Get-ChildItem dist -Filter "*.zip" -File | ForEach-Object FullName)
-          if ($assets.Count -ne 1) { throw "Expected one release ZIP" }
+          $assets = @(Get-ChildItem dist -File | Where-Object { $_.Extension -in ".zip", ".exe" } | ForEach-Object FullName)
+          if ($assets.Count -ne 2) { throw "Expected installer and portable ZIP" }
           gh release create $env:RELEASE_TAG @assets --verify-tag --generate-notes --title $env:RELEASE_TAG --latest
           if ($LASTEXITCODE -ne 0) { throw "Release publication failed" }

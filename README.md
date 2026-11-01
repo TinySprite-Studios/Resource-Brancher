@@ -90,3 +90,10 @@ FiveM resolves junctions when assigning categories. A source path without the br
 ## Build and release
 
 This folder is the single working checkout. Run `scripts/build.ps1` to build. See BUILDING.md for release instructions. Builds bundle only application assets, never saved settings. Your installed build and source launch share your personal Windows settings.
+
+## Windows installer and updates
+Use the Setup EXE from GitHub Releases to install Resource Brancher with a Start menu
+shortcut, optional desktop shortcut, and Windows uninstaller. Check for updates in the
+sidebar, download, then choose Install and restart. Updates upgrade the same installed
+folder and retain your personal settings. Uninstalling also leaves settings intact.
+Portable users can migrate by running Setup; existing settings are picked up automatically.

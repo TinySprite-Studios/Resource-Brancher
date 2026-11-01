@@ -55,5 +55,5 @@ resource_brancher.py   Desktop window and folder pickers.
 branch_store.py        Saved setups and history.
 ui/                    Interface files.
 junctions.py           Junction creation and path checks.
-settings.json         Saved source folders, destinations and history (created automatically).
+settings.json         Saved in %LOCALAPPDATA%\Resource Brancher, outside the app folder.
 brancher-error.log    Startup errors, if any.
