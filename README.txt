@@ -5,7 +5,7 @@ Requires Windows, Python 3.10 or newer on PATH, and Microsoft Edge WebView2 Runt
 The launcher sets up pywebview on first use if needed. Administrator launch is normally not needed.
 
 1. Click Add source folder or Choose folder and select the real folder, such as:
-   G:\FiveM Drive\TSS_Source\[tss_paid]\tss-inventory
+   C:\Resources\my-resource
 2. Click Add destination and choose a parent folder.
 3. Choose the server's resources location. The source folder name is added automatically.
    Edit the full path if you want a different folder name or location.

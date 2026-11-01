@@ -2,10 +2,15 @@
 from pathlib import Path
 import subprocess
 import sys
+import os
+import re
 from PIL import Image
 
 root = Path(__file__).resolve().parent.parent
-version = (root / "VERSION").read_text().strip()
+tag = os.environ.get("RELEASE_TAG", "")
+version = tag.removeprefix("v") if tag else (root / "VERSION").read_text().strip()
+if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+    raise ValueError("Version must have the form 1.0.1")
 assets = root / "build"
 assets.mkdir(exist_ok=True)
 icon = assets / "resource-brancher.ico"
