@@ -17,3 +17,13 @@ does not trigger GitHub. Manual workflow runs produce a downloadable build artif
 Local builds use VERSION; update it when you want the local ZIP version to change.
 
 Executables are unsigned; Windows may display a reputation prompt.
+
+## In-app updates
+Built apps check the latest public GitHub release on launch. Users can also check
+manually, download, then choose Restart with update. Downloads require GitHub's
+SHA-256 asset digest. Drafts, prereleases and older versions are ignored.
+Updates run from a versioned folder under Local AppData/Resource Brancher.
+The original portable EXE stays at its previous version; launching it again requires
+checking for updates again. Source copies use Git and cannot install updates.
+Personal settings are shared across versions and never sent to GitHub.
+The first release containing the updater must be downloaded manually.
